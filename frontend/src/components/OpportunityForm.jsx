@@ -8,15 +8,47 @@ const OPPORTUNITY_TYPES = [
   "Other",
 ];
 
-function OpportunityForm() {
+function OpportunityForm({ onAnalyze, isLoading = false, error = null }) {
   const [opportunityType, setOpportunityType] = useState("Scholarship");
   const [opportunity, setOpportunity] = useState("");
+  const [validationError, setValidationError] = useState(null);
+
+  function handleTextChange(event) {
+    setOpportunity(event.target.value);
+    if (validationError) {
+      setValidationError(null);
+    }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (isLoading) return;
+
+    if (!opportunity || !opportunity.trim()) {
+      setValidationError(
+        "Please paste or type an opportunity description before analyzing.",
+      );
+      return;
+    }
+
+    setValidationError(null);
+    if (onAnalyze) {
+      onAnalyze({
+        opportunity_type: opportunityType,
+        description: opportunity.trim(),
+      });
+    }
+  }
 
   return (
-    <form className="form" onSubmit={(event) => event.preventDefault()}>
+    <form className="form" onSubmit={handleSubmit}>
       <fieldset className="chip-fieldset">
         <legend>Opportunity type</legend>
-        <div className="chip-row" role="radiogroup" aria-label="Opportunity type">
+        <div
+          className="chip-row"
+          role="radiogroup"
+          aria-label="Opportunity type"
+        >
           {OPPORTUNITY_TYPES.map((type) => {
             const selected = opportunityType === type;
             return (
@@ -27,6 +59,7 @@ function OpportunityForm() {
                 aria-checked={selected}
                 className={selected ? "chip chip-selected" : "chip"}
                 onClick={() => setOpportunityType(type)}
+                disabled={isLoading}
               >
                 {type}
               </button>
@@ -44,15 +77,32 @@ function OpportunityForm() {
           rows="10"
           placeholder="Paste the opportunity description, requirements, eligibility, deadline, benefits, or announcement here..."
           value={opportunity}
-          onChange={(event) => setOpportunity(event.target.value)}
+          onChange={handleTextChange}
+          disabled={isLoading}
         />
       </div>
 
-      <button type="button" className="analyze-button">
+      {validationError && (
+        <div className="alert alert-warning" role="alert">
+          {validationError}
+        </div>
+      )}
+
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
+
+      <button
+        type="submit"
+        className={`analyze-button ${isLoading ? "analyze-button-loading" : ""}`}
+        disabled={isLoading}
+      >
         <span className="spark" aria-hidden="true">
           ✦
         </span>
-        Analyze My Match →
+        {isLoading ? "Analyzing Opportunity..." : "Analyze My Match →"}
       </button>
     </form>
   );

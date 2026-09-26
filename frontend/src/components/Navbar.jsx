@@ -1,7 +1,6 @@
 function Navbar() {
   return (
     <header className="navbar">
-      <div className="navbar-inner">
       <div className="navbar-brand">
         <span className="logo-mark" aria-hidden="true">
           <svg viewBox="0 0 40 40" width="40" height="40" focusable="false">
@@ -26,10 +25,7 @@ function Navbar() {
               strokeWidth="2.2"
               strokeLinecap="round"
             />
-            <path
-              d="M20 9l3 4h-6z"
-              fill="#fff"
-            />
+            <path d="M20 9l3 4h-6z" fill="#fff" />
           </svg>
         </span>
         <div className="brand-copy">

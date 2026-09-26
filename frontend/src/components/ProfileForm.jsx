@@ -1,17 +1,17 @@
-import { useState } from "react";
-
-function ProfileForm() {
-  const [profile, setProfile] = useState({
+function ProfileForm({ profile, onChange }) {
+  const currentProfile = profile || {
     studyProgram: "",
     semester: "",
     gpa: "",
     skills: "",
     experience: "",
-  });
+  };
 
   function handleChange(event) {
     const { name, value } = event.target;
-    setProfile((current) => ({ ...current, [name]: value }));
+    if (onChange) {
+      onChange(name, value);
+    }
   }
 
   return (
@@ -24,7 +24,7 @@ function ProfileForm() {
           type="text"
           autoComplete="off"
           placeholder="Informatics Engineering"
-          value={profile.studyProgram}
+          value={currentProfile.studyProgram}
           onChange={handleChange}
         />
       </div>
@@ -38,7 +38,7 @@ function ProfileForm() {
             type="text"
             inputMode="numeric"
             placeholder="5"
-            value={profile.semester}
+            value={currentProfile.semester}
             onChange={handleChange}
           />
         </div>
@@ -50,7 +50,7 @@ function ProfileForm() {
             type="text"
             inputMode="decimal"
             placeholder="3.52"
-            value={profile.gpa}
+            value={currentProfile.gpa}
             onChange={handleChange}
           />
         </div>
@@ -63,7 +63,7 @@ function ProfileForm() {
           name="skills"
           type="text"
           placeholder="Python, React, Cloud, Cybersecurity..."
-          value={profile.skills}
+          value={currentProfile.skills}
           onChange={handleChange}
         />
       </div>
@@ -75,7 +75,7 @@ function ProfileForm() {
           name="experience"
           rows="5"
           placeholder="Organizations, projects, internships, certifications, competitions..."
-          value={profile.experience}
+          value={currentProfile.experience}
           onChange={handleChange}
         />
       </div>
