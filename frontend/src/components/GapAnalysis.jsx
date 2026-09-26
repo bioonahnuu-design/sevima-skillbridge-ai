@@ -8,126 +8,137 @@ function GapAnalysis({ data }) {
   } = data;
 
   return (
-    <section className="gap-report-container" aria-labelledby="gap-report-heading">
-      {/* Section Header */}
+    <section className="gap-report-container" aria-labelledby="gap-analysis-title">
+      {/* Header */}
       <div className="gap-report-header">
-        <span className="gap-eyebrow">GAP ANALYSIS</span>
-        <h2 id="gap-report-heading" className="gap-title">
-          What&apos;s holding you back?
+        <span className="gap-eyebrow">DIAGNOSTIC GAP ANALYSIS</span>
+        <h2 id="gap-analysis-title" className="gap-title">
+          What's holding you back?
         </h2>
         <p className="gap-subtitle">
-          Focus on the requirements that need attention before you apply.
+          Direct comparison between the opportunity's strict requirements and your student profile.
         </p>
       </div>
 
-      {/* Dominant Block: NEEDS ATTENTION */}
+      {/* Dominant NEEDS ATTENTION Block */}
       <div className="needs-attention-block">
         <div className="attention-header-bar">
           <div className="attention-tag-group">
             <span className="attention-bullet" aria-hidden="true">!</span>
-            <span className="attention-label">NEEDS ATTENTION</span>
+            <span className="attention-label">CRITICAL ATTENTION REQUIRED</span>
           </div>
           <span className="attention-count-tag">
-            {gaps.length} item{gaps.length === 1 ? "" : "s"} need attention
+            {gaps.length} {gaps.length === 1 ? "Gap Identified" : "Gaps Identified"}
           </span>
         </div>
 
-        {gaps.length > 0 ? (
+        {gaps.length === 0 ? (
+          <div className="attention-empty-state">
+            <span className="empty-check-icon" aria-hidden="true">✓</span>
+            <div>
+              <div className="empty-strong">No critical gaps detected!</div>
+              <div className="empty-sub">
+                Your profile satisfies all core explicit criteria for this opportunity.
+              </div>
+            </div>
+          </div>
+        ) : (
           <div className="attention-items-stack">
             {gaps.map((item, idx) => {
-              const numStr = String(idx + 1).padStart(2, "0");
+              const reqText = item.requirement || item.item || item.label || "Requirement";
+              const reasonText = item.message || item.reason || "";
+              const categoryText = item.category || "";
+
               return (
                 <div key={idx} className="attention-row">
-                  <div className="attention-num-col">
-                    <span className="attention-num">{numStr}</span>
-                  </div>
+                  <span className="attention-num">
+                    #{String(idx + 1).padStart(2, "0")}
+                  </span>
                   <div className="attention-body-col">
                     <div className="attention-req-row">
-                      <span className="attention-req-name">{item.requirement}</span>
-                      <span className="attention-req-badge">
-                        Required by this opportunity
-                      </span>
+                      <span className="attention-req-name">{reqText}</span>
+                      {categoryText && (
+                        <span className="attention-req-badge">{categoryText}</span>
+                      )}
                     </div>
-                    <p className="attention-msg-text">
-                      {item.message || "No supporting evidence found in your profile."}
-                    </p>
+                    {reasonText && (
+                      <p className="attention-msg-text">{reasonText}</p>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
-        ) : (
-          <div className="attention-empty-state">
-            <span className="empty-check-icon" aria-hidden="true">✓</span>
-            <div>
-              <p className="empty-strong">No blocking gaps detected!</p>
-              <p className="empty-sub">
-                Your profile satisfies the stated criteria for this opportunity.
-              </p>
-            </div>
-          </div>
         )}
       </div>
 
-      {/* Supporting Sections: ALREADY MATCHED & NEEDS VERIFICATION */}
+      {/* Supporting Grid: ALREADY MATCHED & NEEDS VERIFICATION */}
       <div className="gap-supporting-grid">
-        {/* Already Matched */}
-        <div className="supporting-card matched-card">
+        {/* Card 1: Already Matched */}
+        <div className="supporting-card">
           <div className="supporting-header">
             <div className="supporting-title-group">
               <span className="supporting-icon icon-matched" aria-hidden="true">✓</span>
-              <h3 className="supporting-title">ALREADY MATCHED</h3>
+              <span className="supporting-title">ALREADY MATCHED</span>
             </div>
-            <span className="supporting-count">{matched.length} satisfied</span>
+            <span className="supporting-count">
+              {matched.length} {matched.length === 1 ? "item" : "items"}
+            </span>
           </div>
 
-          {matched.length > 0 ? (
-            <ul className="supporting-list">
-              {matched.map((item, idx) => (
-                <li key={idx} className="supporting-list-item">
-                  <span className="item-mark mark-matched" aria-hidden="true">✓</span>
-                  <div className="item-content">
-                    <span className="item-req-title">{item.requirement}</span>
-                    {item.message && (
-                      <span className="item-req-sub">{item.message}</span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+          {matched.length === 0 ? (
+            <p className="supporting-empty">No criteria verified as fully matched yet.</p>
           ) : (
-            <p className="supporting-empty">No criteria evaluated as matched yet.</p>
+            <ul className="supporting-list">
+              {matched.map((item, idx) => {
+                const reqText = item.requirement || item.item || item.label || "Requirement";
+                const msgText = item.message || item.reason || "";
+
+                return (
+                  <li key={idx} className="supporting-list-item">
+                    <span className="item-mark mark-matched" aria-hidden="true">✓</span>
+                    <div className="item-content">
+                      <span className="item-req-title">{reqText}</span>
+                      {msgText && <span className="item-req-sub">{msgText}</span>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
 
-        {/* Needs Verification */}
-        <div className="supporting-card verify-card">
+        {/* Card 2: Needs Verification */}
+        <div className="supporting-card">
           <div className="supporting-header">
             <div className="supporting-title-group">
               <span className="supporting-icon icon-verify" aria-hidden="true">?</span>
-              <h3 className="supporting-title">NEEDS VERIFICATION</h3>
+              <span className="supporting-title">NEEDS VERIFICATION</span>
             </div>
-            <span className="supporting-count">{needs_verification.length} items</span>
+            <span className="supporting-count">
+              {needs_verification.length} {needs_verification.length === 1 ? "item" : "items"}
+            </span>
           </div>
 
-          {needs_verification.length > 0 ? (
-            <ul className="supporting-list">
-              {needs_verification.map((item, idx) => (
-                <li key={idx} className="supporting-list-item">
-                  <span className="item-mark mark-verify" aria-hidden="true">?</span>
-                  <div className="item-content">
-                    <span className="item-req-title">{item.requirement}</span>
-                    {item.message && (
-                      <span className="item-req-sub">{item.message}</span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
+          {needs_verification.length === 0 ? (
+            <p className="supporting-empty">No criteria pending verification.</p>
           ) : (
-            <p className="supporting-empty">
-              No extra verification items detected in opportunity text.
-            </p>
+            <ul className="supporting-list">
+              {needs_verification.map((item, idx) => {
+                const reqText = item.requirement || item.item || item.label || "Requirement";
+                const msgText = item.message || item.reason || "";
+
+                return (
+                  <li key={idx} className="supporting-list-item">
+                    <span className="item-mark mark-verify" aria-hidden="true">?</span>
+                    <div className="item-content">
+                      <span className="item-req-title">{reqText}</span>
+                      {msgText && <span className="item-req-sub">{msgText}</span>}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </div>

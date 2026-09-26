@@ -137,3 +137,54 @@ export async function generateActionPlan({
 
   return await response.json();
 }
+
+/**
+ * Orchestrates full opportunity analysis, profile match, gap analysis, action planning,
+ * and grounded AI personalization via the backend SkillBridge Agent.
+ * @param {Object} payload
+ * @param {Object} payload.profile - Student profile object
+ * @param {string} payload.opportunity_type - Opportunity category
+ * @param {string} payload.description - Opportunity announcement text
+ * @returns {Promise<{analysis: Object, match: Object, plan: Object, agent: Object}>} Orchestrated response
+ */
+export async function analyzeWithAgent({
+  profile,
+  opportunity_type,
+  description,
+}) {
+  const response = await fetch(`${API_BASE_URL}/api/agent/analyze`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      profile,
+      opportunity_type,
+      description,
+    }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Agent analysis request failed with status ${response.status}`;
+    try {
+      const errorJson = await response.json();
+      if (errorJson.detail) {
+        if (typeof errorJson.detail === "string") {
+          errorMessage = errorJson.detail;
+        } else if (
+          Array.isArray(errorJson.detail) &&
+          errorJson.detail[0]?.msg
+        ) {
+          errorMessage = errorJson.detail[0].msg;
+        }
+      }
+    } catch {
+      if (response.statusText) {
+        errorMessage = response.statusText;
+      }
+    }
+    throw new Error(errorMessage);
+  }
+
+  return await response.json();
+}

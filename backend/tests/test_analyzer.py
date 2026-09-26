@@ -180,3 +180,92 @@ def test_mahasiswa_aktif_minimal_semester_preserves_active_student():
     assert len(eligibility) == 1
     assert eligibility[0] == "Mahasiswa aktif S1"
 
+
+# -------------------------------------------------------------
+# REGRESSION TESTS: Context-Aware Document & Certificate Detection
+# -------------------------------------------------------------
+
+def test_case_a_certificate_as_benefit_never_extracted_as_documents():
+    """
+    CASE A: Certificate mentioned in Benefit section must NOT become a required document.
+    """
+    desc = """
+    Software Engineering Challenge 2026
+    Kualifikasi:
+    - Mahasiswa aktif S1 minimal semester 4
+    - IPK minimal 3.00
+    - Menguasai Python dan React
+
+    Benefit:
+    - Sertifikat penyelesaian dan hadiah tunai
+    """
+    res = analyze_opportunity("Competition", desc)
+    assert res["analysis"]["required_documents"] == []
+    assert any("Certificate of Completion" in b for b in res["analysis"]["benefits"])
+
+
+def test_certificates_as_perks_and_rewards_not_documents():
+    """
+    Verifies that various benefit/perk certificate phrasings are never classified as required documents.
+    """
+    benefit_cases = [
+        "Workshop AI. Benefit: Sertifikat penyelesaian.",
+        "Kompetisi Web. Peserta akan mendapatkan sertifikat penyelesaian.",
+        "Peserta memperoleh sertifikat resmi setelah menyelesaikan pelatihan.",
+        "Sertifikat resmi diberikan kepada peserta yang hadir penuh.",
+        "Global Forum. Perks: Certificate of completion.",
+        "Official certificate will be provided to all participants.",
+        "Total hadiah: sertifikat dan uang pembinaan.",
+    ]
+    for text in benefit_cases:
+        res = analyze_opportunity("Competition", text)
+        assert res["analysis"]["required_documents"] == [], f"Failed for text: {text}"
+
+
+def test_case_b_certificate_explicitly_required():
+    """
+    CASE B: Explicit document requirements containing certificates must be extracted.
+    """
+    desc = """
+    Dokumen:
+    - CV
+    - Transkrip nilai
+    - Sertifikat prestasi
+    """
+    res = analyze_opportunity("Scholarship", desc)
+    docs = res["analysis"]["required_documents"]
+    assert "Curriculum Vitae (CV) / Resume" in docs
+    assert "Academic Transcript" in docs
+    assert "Certificates / Awards" in docs
+
+
+def test_case_c_language_certificate_does_not_add_generic_certificate():
+    """
+    CASE C: Language certificate (TOEFL/IELTS) must NOT redundantly add generic Certificates / Awards.
+    """
+    desc = "Kirimkan sertifikat TOEFL."
+    res = analyze_opportunity("Scholarship", desc)
+    docs = res["analysis"]["required_documents"]
+    assert docs == ["English Proficiency Certificate (TOEFL/IELTS)"]
+    assert "Certificates / Awards" not in docs
+
+
+def test_explicit_certificate_types_detected():
+    """
+    Specific achievement, award, organization, seminar, training, and skill certificates
+    must be recognized as 'Certificates / Awards'.
+    """
+    types_cases = [
+        ("Lampirkan sertifikat prestasi akademik.", "Certificates / Awards"),
+        ("Kirimkan sertifikat penghargaan tingkat nasional.", "Certificates / Awards"),
+        ("Sertakan certificate of achievement.", "Certificates / Awards"),
+        ("Unggah sertifikat organisasi yang relevan.", "Certificates / Awards"),
+        ("Dokumen: Sertifikat seminar atau workshop.", "Certificates / Awards"),
+        ("Persyaratan: Sertifikat pelatihan software engineering.", "Certificates / Awards"),
+        ("Wajib melampirkan sertifikat keahlian Cloud.", "Certificates / Awards"),
+    ]
+    for text, expected in types_cases:
+        res = analyze_opportunity("Scholarship", text)
+        assert expected in res["analysis"]["required_documents"], f"Failed for text: {text}"
+
+

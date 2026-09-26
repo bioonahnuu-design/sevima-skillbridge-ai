@@ -111,3 +111,54 @@ class PlanRequest(BaseModel):
     matched: Optional[List[GapItem]] = None
     deadline: Optional[str] = None
 
+
+class AgentAnalyzeRequest(BaseModel):
+    profile: StudentProfile = Field(default_factory=StudentProfile, description="Student profile context")
+    opportunity_type: str = Field(..., description="Type of opportunity, e.g. Scholarship, Internship")
+    description: str = Field(..., description="Opportunity announcement text")
+
+    @field_validator("opportunity_type")
+    @classmethod
+    def validate_opportunity_type(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("opportunity_type is required and cannot be empty.")
+        return value.strip()
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("description is required and cannot be empty or only whitespace.")
+        return value.strip()
+
+
+class AIPersonalization(BaseModel):
+    summary: str = Field(..., description="Personalized readiness summary")
+    why_this_match: str = Field(..., description="Grounded explanation of why the profile matches this opportunity")
+    focus_areas: List[str] = Field(default_factory=list, description="Key preparation focus areas")
+    recommended_strategy: str = Field(..., description="Actionable application strategy")
+    encouragement: str = Field(..., description="Constructive encouragement grounded in readiness")
+
+
+class AgentMeta(BaseModel):
+    actions_executed: List[str] = Field(
+        default_factory=list,
+        description="List of deterministic and AI actions executed by the agent",
+    )
+    personalization: Optional[AIPersonalization] = Field(
+        default=None,
+        description="Grounded AI personalization output if available",
+    )
+    ai_personalization_available: bool = Field(
+        default=False,
+        description="Whether AI personalization was successfully produced",
+    )
+
+
+class AgentAnalyzeResponse(BaseModel):
+    analysis: OpportunityAnalyzeResponse
+    match: MatchResponse
+    plan: ActionPlanResponse
+    agent: AgentMeta
+
+

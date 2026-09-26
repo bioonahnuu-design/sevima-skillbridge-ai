@@ -56,7 +56,14 @@ DOCUMENT_PATTERNS = [
     (r"\bktm\b|\bkartu\s+tanda\s+mahasiswa\b|\bstudent\s+id\b", "Student ID (KTM)"),
     (r"\bktp\b|\bkartu\s+tanda\s+penduduk\b|\bid\s+card\b|\bidentitas\s+diri\b", "ID Card (KTP)"),
     (r"\btoefl\b|\bielts\b|\btoeic\b|\bduolingo\s+english\s+test\b|\bsertifikat\s+(?:kemampuan\s+)?bahasa(?:\s+inggris)?\b|\benglish\s+proficiency\s+certificate\b", "English Proficiency Certificate (TOEFL/IELTS)"),
-    (r"\bsertifikat\s+prestasi\b|\bcertificate\s+of\s+achievement\b|\bsertifikat\s+penghargaan\b|\bsertifikat\b", "Certificates / Awards"),
+    (
+        r"\b(?:"
+        r"sertifikat\s+(?:prestasi|penghargaan|kejuaraan|lomba|akademik|kompetensi|keahlian|organisasi|seminar|pelatihan)"
+        r"|certificate\s+of\s+(?:achievement|merit|excellence)"
+        r"|award\s+certificate"
+        r")\b",
+        "Certificates / Awards",
+    ),
     (r"\bsurat\s+keterangan\s+aktif\s+kuliah\b|\bcertificate\s+of\s+active\s+enrollment\b", "Certificate of Active Enrollment"),
     (r"\brancangan\s+studi\b|\bstudy\s+plan\b|\brencana\s+studi\b", "Study Plan / Proposal"),
     (r"\bsurat\s+keterangan\s+penghasilan\b|\bslip\s+gaji\b|\bfinancial\s+statement\b", "Financial Statement / Salary Slip"),
@@ -75,7 +82,17 @@ BENEFIT_PATTERNS = [
     (r"\b(?:mentoring|mentorship|bimbingan|pelatihan|training)\b", "Mentorship & Training"),
     (r"\b(?:networking|relasi|jaringan\s+profesional|professional\s+network)\b", "Networking opportunities"),
     (r"\b(?:hadiah\s*(?:uang|tunai|pembinaan)?|cash\s+prize|prize\s+pool|total\s+hadiah|dana\s+hibah|grant|funding)\b", "Cash prize / Funding grant"),
-    (r"\b(?:sertifikat\s+resmi|sertifikat\s+penyelesaian|certificate\s+of\s+completion|official\s+certificate)\b", "Official Certificate of Completion"),
+    (
+        r"\b(?:"
+        r"sertifikat\s+resmi"
+        r"|sertifikat\s+penyelesaian"
+        r"|sertifikat\s+keikutsertaan"
+        r"|sertifikat\s+kehadiran"
+        r"|certificate\s+of\s+(?:completion|participation|attendance)"
+        r"|official\s+certificate"
+        r")\b",
+        "Official Certificate of Completion",
+    ),
 ]
 
 
@@ -252,26 +269,143 @@ def extract_required_skills(text: str) -> List[str]:
     return found_skills
 
 
+def is_benefit_line(line: str) -> bool:
+    """
+    Checks if a line indicates an awarded benefit, prize, completion perk,
+    or received item rather than a required application document.
+    """
+    benefit_line_patterns = [
+        r"(?i)\b(?:mendapatkan|memperoleh|menerima|diberikan)\s+(?:sebuah\s+)?sertifikat\b",
+        r"(?i)\bpeserta\s+(?:akan\s+)?(?:mendapatkan|memperoleh|menerima|diberikan)\b",
+        r"(?i)\bsertifikat\s+(?:resmi\s+)?(?:penyelesaian|keikutsertaan|kehadiran|peserta)\b",
+        r"(?i)\bsertifikat\s+(?:resmi\s+)?diberikan\s+kepada\s+peserta\b",
+        r"(?i)\bcertificate\s+of\s+(?:completion|participation|attendance)\b",
+        r"(?i)\b(?:akan\s+)?(?:mendapatkan|memperoleh|diberikan)\s+sertifikat\b",
+        r"(?i)\b(?:hadiah|fasilitas|perks?|benefit)\s*(?:berupa|:)?\b",
+        r"(?i)\b(?:will\s+be\s+provided|will\s+receive|awarded\s+(?:a\s+)?certificate|certificate\s+will\s+be\s+provided)\b",
+        r"(?i)\btotal\s+hadiah\s*:\s*sertifikat\b",
+    ]
+    return any(re.search(pat, line) for pat in benefit_line_patterns)
+
+
+def check_has_certificate_requirement(filtered_text: str, doc_section_text: str) -> bool:
+    """
+    Context-aware check for whether an opportunity genuinely requires a certificate
+    as an application document (Certificates / Awards).
+
+    A generic word such as 'sertifikat/certificate' alone is NOT sufficient.
+    Requires:
+    1. Explicit achievement/award phrasing (e.g. 'sertifikat prestasi', 'sertifikat penghargaan',
+       'sertifikat organisasi', 'sertifikat seminar', 'sertifikat pelatihan', 'sertifikat keahlian'), OR
+    2. Explicit placement under a document submission section (e.g. 'Dokumen:'), OR
+    3. Explicit submission verbs attached to certificate (e.g. 'upload certificate', 'lampirkan sertifikat').
+    Language certificates (TOEFL/IELTS) are excluded.
+    """
+    # 1. Explicit achievement, award, competition, training, seminar, or competence certificate
+    achievement_pattern = (
+        r"(?i)\b(?:"
+        r"sertifikat\s+(?:prestasi|penghargaan|kejuaraan|lomba|akademik|kompetensi|keahlian|organisasi|seminar|pelatihan)"
+        r"|certificate\s+of\s+(?:achievement|merit|excellence)"
+        r"|award\s+certificate"
+        r")\b"
+    )
+    if re.search(achievement_pattern, filtered_text):
+        return True
+
+    # 2. Explicit submission verbs attached to certificate outside benefits (excluding language certificates)
+    submission_verbs = (
+        r"(?i)\b(?:lampirkan|upload|unggah|kirimkan|kirim|submit|sertakan|melampirkan|mengunggah)\s+"
+        r"(?:(?:salinan|scan|foto|file|dokumen)\s+)?"
+        r"(?:semua\s+)?(?:sertifikat|certificate)\b"
+        r"(?!\s*(?:\([^)]*\)\s*)?(?:toefl|ielts|toeic|duolingo|bahasa|english|kemampuan))"
+    )
+    if re.search(submission_verbs, filtered_text):
+        return True
+
+    # 3. Mentioned inside explicit document requirement section (not pure TOEFL/IELTS)
+    if doc_section_text:
+        lines = doc_section_text.splitlines()
+        for line in lines:
+            line_clean = line.strip()
+            if not line_clean:
+                continue
+            # If the line only mentions language certificate, let TOEFL handler take it
+            if re.search(r"(?i)\b(?:toefl|ielts|toeic|duolingo|bahasa|english)\b", line_clean):
+                if re.search(r"(?i)\b(?:prestasi|penghargaan|kompetensi|keahlian|organisasi|seminar|pelatihan)\b", line_clean):
+                    return True
+                continue
+            if re.search(r"(?i)\b(?:sertifikat|certificate)\b", line_clean):
+                return True
+
+    return False
+
+
 def extract_required_documents(text: str) -> List[str]:
     """
-    Extracts recognized required documents present in the text.
+    Extracts recognized required documents present in the text with context awareness.
+    Certificates or documents mentioned in benefit/prize sections are excluded.
     """
-    found_docs: List[str] = []
-    has_language_cert = False
+    lines = text.splitlines()
+    non_benefit_lines = []
+    doc_section_lines = []
+    in_benefit_section = False
+    in_doc_section = False
 
+    benefit_header_re = re.compile(
+        r"(?i)^(?:benefits?|fasilitas|keuntungan|perks?|hadiah|what\s+you(?:'ll|\s+will)\s+get)\s*[:\-–]?$"
+    )
+    doc_header_re = re.compile(
+        r"(?i)^(?:dokumen(?:\s+(?:persyaratan|pendaftaran|yang\s+dibutuhkan))?|documents?|berkas(?:\s+persyaratan)?|persyaratan\s+administrasi|required\s+documents?)\s*[:\-–]?$"
+    )
+    general_header_re = re.compile(r"(?i)^[A-Za-z\s]+[:\-–]$")
+
+    for line in lines:
+        clean = line.strip()
+        if not clean:
+            continue
+
+        if benefit_header_re.match(clean):
+            in_benefit_section = True
+            in_doc_section = False
+            continue
+
+        if doc_header_re.match(clean):
+            in_doc_section = True
+            in_benefit_section = False
+            continue
+
+        if general_header_re.match(clean) and len(clean.split()) <= 4:
+            in_benefit_section = False
+            in_doc_section = False
+
+        if in_benefit_section:
+            continue
+
+        if is_benefit_line(clean):
+            continue
+
+        non_benefit_lines.append(clean)
+        if in_doc_section:
+            doc_section_lines.append(clean)
+
+    filtered_text = "\n".join(non_benefit_lines)
+    doc_section_text = "\n".join(doc_section_lines)
+
+    found_docs: List[str] = []
+
+    # 1. Match standard unambiguous document patterns against non-benefit text
     for pattern, canonical_name in DOCUMENT_PATTERNS:
-        if re.search(pattern, text, re.IGNORECASE):
-            if "TOEFL/IELTS" in canonical_name:
-                has_language_cert = True
-            # Avoid redundant generic "Certificates / Awards" if only language cert was found
-            if canonical_name == "Certificates / Awards":
-                # Check if it was explicitly mentioned as achievement/award cert or standalone cert
-                if not re.search(r"(?i)\b(sertifikat\s+prestasi|sertifikat\s+penghargaan|certificate\s+of\s+achievement)\b", text):
-                    # If only "sertifikat toefl" was in text, skip generic cert
-                    if has_language_cert and not re.search(r"(?i)\b(sertifikat\s+(?:organisasi|seminar|pelatihan|keahlian))\b", text):
-                        continue
+        if canonical_name == "Certificates / Awards":
+            continue
+        if re.search(pattern, filtered_text, re.IGNORECASE):
             if canonical_name not in found_docs:
                 found_docs.append(canonical_name)
+
+    # 2. Context-aware check for Certificates / Awards
+    if check_has_certificate_requirement(filtered_text, doc_section_text):
+        if "Certificates / Awards" not in found_docs:
+            found_docs.append("Certificates / Awards")
+
     return found_docs
 
 

@@ -144,6 +144,11 @@ function ProfileMatch({ data }) {
               score: 0,
               detail: "Not evaluated",
             };
+            const isNotSpecified = catData.status === "not_specified";
+            const displayTitle =
+              key === "documents" && isNotSpecified
+                ? "Documents — Not Specified"
+                : title;
             const badge = formatStatusBadge(catData.status);
             const scoreVal =
               typeof catData.score === "number" ? Math.round(catData.score) : 0;
@@ -154,25 +159,29 @@ function ProfileMatch({ data }) {
               <div key={key} className="breakdown-row-item">
                 <div className="breakdown-row-info">
                   <div className="breakdown-name-wrap">
-                    <span className="breakdown-dim-title">{title}</span>
-                    <span className="breakdown-weight-tag">({weight}%)</span>
+                    <span className="breakdown-dim-title">{displayTitle}</span>
+                    <span className="breakdown-weight-tag">
+                      {isNotSpecified ? "(Not specified)" : `(${weight}%)`}
+                    </span>
                   </div>
 
                   <div className="breakdown-status-wrap">
                     <span className={badge.className}>{badge.label}</span>
                     <span className="breakdown-pts">
-                      {scoreVal} / {weight} pts
+                      {isNotSpecified ? "Not specified" : `${scoreVal} / ${weight} pts`}
                     </span>
                   </div>
                 </div>
 
-                {/* Progress Bar Track */}
-                <div className="breakdown-bar-track" aria-hidden="true">
-                  <div
-                    className={`breakdown-bar-fill ${percentage > 0 ? "fill-active" : "fill-empty"}`}
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
+                {/* Progress Bar Track: only show for evaluable categories */}
+                {!isNotSpecified && (
+                  <div className="breakdown-bar-track" aria-hidden="true">
+                    <div
+                      className={`breakdown-bar-fill ${percentage > 0 ? "fill-active" : "fill-empty"}`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                )}
 
                 {catData.detail && (
                   <p className="breakdown-detail-text">{catData.detail}</p>

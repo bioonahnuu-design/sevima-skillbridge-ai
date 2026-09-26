@@ -4,13 +4,16 @@ import ProfileForm from "../components/ProfileForm.jsx";
 import OpportunityForm from "../components/OpportunityForm.jsx";
 import OpportunityAnalysis from "../components/OpportunityAnalysis.jsx";
 import ProfileMatch from "../components/ProfileMatch.jsx";
+import AIInsight from "../components/AIInsight.jsx";
 import GapAnalysis from "../components/GapAnalysis.jsx";
 import ActionPlan from "../components/ActionPlan.jsx";
 import {
   analyzeOpportunity,
   matchProfile,
   generateActionPlan,
+  analyzeWithAgent,
 } from "../services/api.js";
+import heroIllustration from "../assets/skillbridge-hero.png";
 
 const MARQUEE_ITEMS = [
   "SCHOLARSHIP",
@@ -20,6 +23,8 @@ const MARQUEE_ITEMS = [
   "VOLUNTEER",
   "COURSE",
 ];
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function Dashboard() {
   const [profile, setProfile] = useState({
@@ -33,6 +38,7 @@ function Dashboard() {
   const [analysisData, setAnalysisData] = useState(null);
   const [matchData, setMatchData] = useState(null);
   const [actionPlanData, setActionPlanData] = useState(null);
+  const [agentData, setAgentData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStage, setLoadingStage] = useState("");
   const [error, setError] = useState(null);
@@ -59,7 +65,7 @@ function Dashboard() {
     revealElements.forEach((el) => observer.observe(el));
 
     return () => observer.disconnect();
-  }, [analysisData, matchData, actionPlanData]);
+  }, [analysisData, matchData, actionPlanData, agentData]);
 
   function handleProfileChange(name, value) {
     setProfile((prev) => ({ ...prev, [name]: value }));
@@ -122,32 +128,66 @@ function Dashboard() {
     };
 
     try {
-      // 1. Analyze Opportunity (Core Feature #1)
-      const oppResult = await analyzeOpportunity({
-        opportunity_type,
-        description,
-      });
-      setAnalysisData(oppResult);
-
-      // 2. Perform Profile Match & Gap Analysis (Core Feature #2)
-      setLoadingStage("Evaluating profile readiness...");
-      const matchResult = await matchProfile({
-        profile: formattedProfile,
-        opportunity: oppResult,
-      });
-      setMatchData(matchResult);
-
-      // 3. Generate Action Plan (Core Feature #3)
-      setLoadingStage("Preparing your action plan...");
+      // 1. Primary Flow: Orchestrated Agent Endpoint via api.js
+      let agentSuccess = false;
       try {
-        const planResult = await generateActionPlan({
-          match_result: matchResult,
-          opportunity: oppResult,
-          deadline: oppResult?.analysis?.deadline,
+        setLoadingStage("Executing AI Agent orchestration...");
+        const resData = await analyzeWithAgent({
+          profile: formattedProfile,
+          opportunity_type,
+          description,
         });
-        setActionPlanData(planResult);
-      } catch (planErr) {
-        setPlanError(planErr.message || "Failed to generate action plan.");
+
+        setAnalysisData(resData.analysis);
+        setMatchData(resData.match);
+        setActionPlanData(resData.plan);
+        setAgentData(resData.agent);
+        agentSuccess = true;
+      } catch (agentErr) {
+        // Network or endpoint issue: will gracefully fall back to sequential calls below
+        console.warn(
+          "Agent orchestration unavailable, falling back to deterministic flow:",
+          agentErr,
+        );
+        agentSuccess = false;
+      }
+
+      // 2. Safe Fallback: Multi-Request Deterministic Flow
+      if (!agentSuccess) {
+        setLoadingStage("Analyzing opportunity requirements...");
+        const oppResult = await analyzeOpportunity({
+          opportunity_type,
+          description,
+        });
+        setAnalysisData(oppResult);
+
+        setLoadingStage("Evaluating profile readiness...");
+        const matchResult = await matchProfile({
+          profile: formattedProfile,
+          opportunity: oppResult,
+        });
+        setMatchData(matchResult);
+
+        setLoadingStage("Preparing your action plan...");
+        try {
+          const planResult = await generateActionPlan({
+            match_result: matchResult,
+            opportunity: oppResult,
+            deadline: oppResult?.analysis?.deadline,
+          });
+          setActionPlanData(planResult);
+        } catch (planErr) {
+          setPlanError(planErr.message || "Failed to generate action plan.");
+        }
+        setAgentData({
+          actions_executed: [
+            "analyze_opportunity",
+            "evaluate_profile",
+            "build_action_plan",
+          ],
+          personalization: null,
+          ai_personalization_available: false,
+        });
       }
 
       // Smooth scroll to results upon completion
@@ -233,73 +273,13 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Right Side: Hero Visual Product Preview */}
-            <div className="hero-visual-wrapper" aria-hidden="true">
-              <div className="floating-preview-card">
-                <div className="preview-top-bar">
-                  <div className="preview-badge-group">
-                    <span className="preview-type-pill">Scholarship</span>
-                    <span className="preview-status-pill">Parsed</span>
-                  </div>
-                  <span className="preview-target-name">
-                    Beasiswa Prestasi Unggulan 2026
-                  </span>
-                </div>
-
-                <div className="preview-score-display">
-                  <div className="preview-score-circle">
-                    <span className="preview-score-val">88%</span>
-                    <span className="preview-score-lbl">MATCH</span>
-                  </div>
-                  <div className="preview-score-info">
-                    <span className="preview-score-title">
-                      Strong Profile Match
-                    </span>
-                    <p className="preview-score-sub">
-                      5 criteria satisfied across academics &amp; citizenship.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Pathway Visual */}
-                <div className="preview-pathway">
-                  <div className="pathway-step pathway-active">
-                    <span className="pathway-dot" />
-                    <span>Profile</span>
-                  </div>
-                  <span className="pathway-line" />
-                  <div className="pathway-step pathway-active">
-                    <span className="pathway-dot" />
-                    <span>Match Analysis</span>
-                  </div>
-                  <span className="pathway-line" />
-                  <div className="pathway-step pathway-active">
-                    <span className="pathway-dot" />
-                    <span>Action Plan</span>
-                  </div>
-                </div>
-
-                {/* Micro Metric Indicators */}
-                <div className="preview-metrics-row">
-                  <div className="preview-metric-box metric-box-matched">
-                    <span className="metric-box-num">5</span>
-                    <span className="metric-box-label">Matched</span>
-                  </div>
-                  <div className="preview-metric-box metric-box-gaps">
-                    <span className="metric-box-num">2</span>
-                    <span className="metric-box-label">Gaps</span>
-                  </div>
-                  <div className="preview-metric-box metric-box-verify">
-                    <span className="metric-box-num">1</span>
-                    <span className="metric-box-label">Verify</span>
-                  </div>
-                </div>
-
-                <div className="floating-accent-tag">
-                  <span className="accent-tag-pulse" />
-                  <span>Deterministic Evaluation</span>
-                </div>
-              </div>
+            {/* Right Side: Hero Visual Illustration */}
+            <div className="hero-visual-wrapper">
+              <img
+                src={heroIllustration}
+                alt="SkillBridge AI student opportunity and career readiness illustration"
+                className="hero-illustration-img"
+              />
             </div>
           </div>
         </section>
@@ -408,7 +388,7 @@ function Dashboard() {
         </section>
 
         {/* ========================================================
-            4. WORKSPACE (Section 4 & 5: Unified Surface Composition)
+            4. WORKSPACE (Unified Cohesive Surface)
             ======================================================== */}
         <section id="workspace" className="workspace-section reveal-section">
           <div className="section-container">
@@ -424,7 +404,6 @@ function Dashboard() {
               </p>
             </div>
 
-            {/* Single Cohesive Workspace Surface with Subtle Vertical Divider */}
             <div className="workspace-unified-sheet">
               {/* Left Column: Student Profile (WHO AM I?) */}
               <div className="workspace-column column-profile">
@@ -474,7 +453,8 @@ function Dashboard() {
             2. Opportunity Snapshot (Core #1)
             3. Profile Match (Core #2)
             4. What's Holding You Back? (Core #2)
-            5. Action Plan & Roadmap (Core #3)
+            5. AI-Guided Insight (Grounded Personalization Layer)
+            6. Action Plan & Roadmap (Core #3)
             ======================================================== */}
         {hasResults && (
           <section id="results" className="results-section reveal-section">
@@ -498,7 +478,15 @@ function Dashboard() {
               {/* 3. What's Holding You Back? (Gap Analysis) */}
               {matchData && <GapAnalysis data={matchData} />}
 
-              {/* 4. Action Plan Roadmap & Verification */}
+              {/* 4. AI-Guided Insight (Grounded Personalization Layer) */}
+              {hasResults && (
+                <AIInsight
+                  personalization={agentData?.personalization}
+                  isAvailable={Boolean(agentData?.ai_personalization_available)}
+                />
+              )}
+
+              {/* 5. Action Plan Roadmap & Verification */}
               {actionPlanData && <ActionPlan data={actionPlanData} />}
 
               {planError && (
@@ -518,7 +506,7 @@ function Dashboard() {
         )}
 
         {/* ========================================================
-            6. FINAL CTA (Section 6 & 20: Rendered ONLY After Results!)
+            6. FINAL CTA (Rendered ONLY After Results!)
             ======================================================== */}
         {hasResults && (
           <section className="final-cta-section reveal-section">

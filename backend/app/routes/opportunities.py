@@ -1,6 +1,9 @@
 from fastapi import APIRouter, HTTPException, status
+from app.agent.orchestrator import SkillBridgeAgent
 from app.schemas import (
     ActionPlanResponse,
+    AgentAnalyzeRequest,
+    AgentAnalyzeResponse,
     MatchRequest,
     MatchResponse,
     OpportunityAnalyzeRequest,
@@ -12,6 +15,9 @@ from app.services.matcher import calculate_match
 from app.services.planner import generate_action_plan
 
 router = APIRouter()
+
+# Agent orchestrator instance
+agent = SkillBridgeAgent()
 
 
 @router.post(
@@ -61,3 +67,27 @@ def match(payload: MatchRequest):
 def plan(payload: PlanRequest):
     return generate_action_plan(payload)
 
+
+@router.post(
+    "/agent/analyze",
+    response_model=AgentAnalyzeResponse,
+    summary="Orchestrated Agent Opportunity Analysis",
+    description="Orchestrates deterministic opportunity analysis, profile matching, and action planning with grounded AI personalization.",
+)
+def agent_analyze(payload: AgentAnalyzeRequest):
+    if not payload.opportunity_type or not payload.opportunity_type.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="opportunity_type is required and cannot be empty.",
+        )
+    if not payload.description or not payload.description.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="description is required and cannot be empty or only whitespace.",
+        )
+
+    return agent.run(
+        profile=payload.profile,
+        opportunity_type=payload.opportunity_type.strip(),
+        description=payload.description.strip(),
+    )
