@@ -87,3 +87,53 @@ export async function matchProfile({ profile, opportunity }) {
 
   return await response.json();
 }
+
+/**
+ * Generates a prioritized action plan and verification checklist.
+ * @param {Object} payload
+ * @param {Object} [payload.match_result] - Match response object
+ * @param {Object} [payload.opportunity] - Analyzed opportunity object
+ * @param {string} [payload.deadline] - Optional extracted deadline
+ * @returns {Promise<Object>} Action plan result
+ */
+export async function generateActionPlan({
+  match_result,
+  opportunity,
+  deadline,
+}) {
+  const response = await fetch(`${API_BASE_URL}/api/plan`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      match_result,
+      opportunity,
+      deadline,
+    }),
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Action plan request failed with status ${response.status}`;
+    try {
+      const errorJson = await response.json();
+      if (errorJson.detail) {
+        if (typeof errorJson.detail === "string") {
+          errorMessage = errorJson.detail;
+        } else if (
+          Array.isArray(errorJson.detail) &&
+          errorJson.detail[0]?.msg
+        ) {
+          errorMessage = errorJson.detail[0].msg;
+        }
+      }
+    } catch {
+      if (response.statusText) {
+        errorMessage = response.statusText;
+      }
+    }
+    throw new Error(errorMessage);
+  }
+
+  return await response.json();
+}

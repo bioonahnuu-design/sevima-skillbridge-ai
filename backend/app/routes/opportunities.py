@@ -1,12 +1,15 @@
 from fastapi import APIRouter, HTTPException, status
 from app.schemas import (
+    ActionPlanResponse,
     MatchRequest,
     MatchResponse,
     OpportunityAnalyzeRequest,
     OpportunityAnalyzeResponse,
+    PlanRequest,
 )
 from app.services.analyzer import analyze_opportunity
 from app.services.matcher import calculate_match
+from app.services.planner import generate_action_plan
 
 router = APIRouter()
 
@@ -47,3 +50,14 @@ def match(payload: MatchRequest):
         profile=payload.profile,
         opportunity=payload.opportunity,
     )
+
+
+@router.post(
+    "/plan",
+    response_model=ActionPlanResponse,
+    summary="Generate Action Plan",
+    description="Transforms match gaps and verification criteria into prioritized, actionable next steps.",
+)
+def plan(payload: PlanRequest):
+    return generate_action_plan(payload)
+

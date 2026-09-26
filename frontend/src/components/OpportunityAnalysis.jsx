@@ -13,168 +13,111 @@ function OpportunityAnalysis({ data }) {
   } = analysis || {};
 
   return (
-    <section className="analysis-section" aria-labelledby="analysis-heading">
-      <article className="card analysis-card">
-        <header className="card-header analysis-card-header">
-          <div className="card-icon card-icon-spark" aria-hidden="true">
-            <span className="spark">✦</span>
-          </div>
-          <div className="analysis-header-text">
-            <div className="analysis-badge-row">
-              <p className="step-label">CORE FEATURE 01</p>
-              {opportunity_type && (
-                <span className="type-badge">{opportunity_type}</span>
-              )}
-            </div>
-            <h2 id="analysis-heading">Opportunity Analysis</h2>
-            <p className="card-subtitle">
-              Structured breakdown of requirements, eligibility, deadlines, and
-              benefits extracted from the opportunity description.
-            </p>
-          </div>
-        </header>
+    <section className="snapshot-container" aria-labelledby="snapshot-heading">
+      <div className="snapshot-header-row">
+        <span className="snapshot-eyebrow">OPPORTUNITY SNAPSHOT</span>
+        {opportunity_type && (
+          <span className="snapshot-type-pill">{opportunity_type}</span>
+        )}
+      </div>
 
-        {/* Quick parameters overview grid */}
-        <div className="analysis-overview-grid">
-          <div className="overview-item">
-            <span className="overview-label">Opportunity Type</span>
-            <span className="overview-value">
-              {opportunity_type || "Not specified"}
-            </span>
-          </div>
-
-          <div className="overview-item">
-            <span className="overview-label">Application Deadline</span>
-            <span
-              className={
-                deadline ? "overview-value" : "overview-value overview-empty"
-              }
-            >
-              {deadline || "Not specified"}
-            </span>
-          </div>
-
-          <div className="overview-item">
-            <span className="overview-label">Minimum GPA</span>
-            <span
-              className={
-                minimum_gpa ? "overview-value" : "overview-value overview-empty"
-              }
-            >
-              {minimum_gpa ? `≥ ${minimum_gpa}` : "Not specified"}
-            </span>
-          </div>
-
-          <div className="overview-item">
-            <span className="overview-label">Semester Requirement</span>
-            <span
-              className={
-                semester_requirement
-                  ? "overview-value"
-                  : "overview-value overview-empty"
-              }
-            >
-              {semester_requirement || "Not specified"}
-            </span>
-          </div>
+      {/* Primary 4-Cell Criteria Grid with Subtle Dividers */}
+      <div className="snapshot-metrics-grid">
+        <div className="snapshot-metric-item">
+          <span className="snapshot-metric-label">OPPORTUNITY TYPE</span>
+          <span className="snapshot-metric-value snapshot-metric-title">
+            {opportunity_type || "General Opportunity"}
+          </span>
         </div>
 
-        {/* Detailed breakdown 2-column grid */}
-        <div className="analysis-details-grid">
-          {/* Required Skills */}
-          <div className="detail-panel">
-            <h3 className="detail-panel-title">
-              <span className="panel-icon" aria-hidden="true">
-                ⚡
-              </span>
-              Required Skills
-            </h3>
+        <div className="snapshot-metric-item">
+          <span className="snapshot-metric-label">APPLICATION DEADLINE</span>
+          <span className={`snapshot-metric-value ${deadline ? "val-highlight" : "val-muted"}`}>
+            {deadline || "Not specified"}
+          </span>
+        </div>
+
+        <div className="snapshot-metric-item">
+          <span className="snapshot-metric-label">MINIMUM GPA</span>
+          <span className={`snapshot-metric-value ${minimum_gpa ? "val-highlight" : "val-muted"}`}>
+            {minimum_gpa ? `≥ ${minimum_gpa}` : "None specified"}
+          </span>
+        </div>
+
+        <div className="snapshot-metric-item">
+          <span className="snapshot-metric-label">SEMESTER</span>
+          <span className={`snapshot-metric-value ${semester_requirement ? "val-highlight" : "val-muted"}`}>
+            {semester_requirement || "Open to all semesters"}
+          </span>
+        </div>
+      </div>
+
+      {/* Editorial Requirement Rows with Subtle Dividers */}
+      <div className="snapshot-details-list">
+        {/* Required Skills */}
+        <div className="snapshot-detail-row">
+          <div className="snapshot-detail-label">REQUIRED SKILLS</div>
+          <div className="snapshot-detail-content">
             {required_skills.length > 0 ? (
-              <div className="tags-container">
-                {required_skills.map((skill, index) => (
-                  <span key={index} className="skill-chip">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="not-specified">Not specified</p>
-            )}
-          </div>
-
-          {/* Required Documents */}
-          <div className="detail-panel">
-            <h3 className="detail-panel-title">
-              <span className="panel-icon" aria-hidden="true">
-                📄
+              <span className="snapshot-inline-items">
+                {required_skills.join(" · ")}
               </span>
-              Required Documents
-            </h3>
-            {required_documents.length > 0 ? (
-              <ul className="doc-list">
-                {required_documents.map((doc, index) => (
-                  <li key={index} className="doc-item">
-                    <span className="item-bullet" aria-hidden="true">
-                      ✓
-                    </span>
-                    <span>{doc}</span>
-                  </li>
-                ))}
-              </ul>
             ) : (
-              <p className="not-specified">Not specified</p>
-            )}
-          </div>
-
-          {/* Eligibility Requirements */}
-          <div className="detail-panel">
-            <h3 className="detail-panel-title">
-              <span className="panel-icon" aria-hidden="true">
-                🎯
+              <span className="snapshot-empty-note">
+                No specific technical or soft skills stated.
               </span>
-              Eligibility Requirements
-            </h3>
-            {eligibility.length > 0 ? (
-              <ul className="doc-list">
-                {eligibility.map((item, index) => (
-                  <li key={index} className="doc-item">
-                    <span className="item-bullet" aria-hidden="true">
-                      ✓
-                    </span>
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="not-specified">Not specified</p>
-            )}
-          </div>
-
-          {/* Benefits / Funding */}
-          <div className="detail-panel">
-            <h3 className="detail-panel-title">
-              <span className="panel-icon" aria-hidden="true">
-                🎁
-              </span>
-              Benefits &amp; Funding
-            </h3>
-            {benefits.length > 0 ? (
-              <ul className="doc-list">
-                {benefits.map((benefit, index) => (
-                  <li key={index} className="doc-item">
-                    <span className="item-bullet" aria-hidden="true">
-                      ✓
-                    </span>
-                    <span>{benefit}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="not-specified">Not specified</p>
             )}
           </div>
         </div>
-      </article>
+
+        {/* Required Documents */}
+        <div className="snapshot-detail-row">
+          <div className="snapshot-detail-label">REQUIRED DOCUMENTS</div>
+          <div className="snapshot-detail-content">
+            {required_documents.length > 0 ? (
+              <span className="snapshot-inline-items">
+                {required_documents.join(" · ")}
+              </span>
+            ) : (
+              <span className="snapshot-empty-note">
+                No mandatory document submission listed.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Eligibility */}
+        <div className="snapshot-detail-row">
+          <div className="snapshot-detail-label">ELIGIBILITY</div>
+          <div className="snapshot-detail-content">
+            {eligibility.length > 0 ? (
+              <span className="snapshot-inline-items">
+                {eligibility.join(" · ")}
+              </span>
+            ) : (
+              <span className="snapshot-empty-note">
+                General eligibility criteria apply.
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Benefits & Funding */}
+        <div className="snapshot-detail-row">
+          <div className="snapshot-detail-label">BENEFITS &amp; FUNDING</div>
+          <div className="snapshot-detail-content">
+            {benefits.length > 0 ? (
+              <span className="snapshot-inline-items">
+                {benefits.join(" · ")}
+              </span>
+            ) : (
+              <span className="snapshot-empty-note">
+                Funding details not explicitly stated.
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

@@ -15,66 +15,86 @@ function ProfileForm({ profile, onChange }) {
   }
 
   return (
-    <form className="form" onSubmit={(event) => event.preventDefault()}>
-      <div className="field">
-        <label htmlFor="studyProgram">Study Program</label>
+    <form className="workspace-form form" onSubmit={(event) => event.preventDefault()}>
+      <div className="form-group field">
+        <label htmlFor="studyProgram" className="form-label">
+          <span>Study Program / Major</span>
+          <span className="form-hint">Program Studi</span>
+        </label>
         <input
           id="studyProgram"
           name="studyProgram"
           type="text"
+          className="form-input"
           autoComplete="off"
-          placeholder="Informatics Engineering"
+          placeholder="e.g. Informatics Engineering, Akuntansi, Manajemen"
           value={currentProfile.studyProgram}
           onChange={handleChange}
         />
       </div>
 
-      <div className="field-row">
-        <div className="field">
-          <label htmlFor="semester">Semester</label>
+      <div className="form-row field-row">
+        <div className="form-group form-col field">
+          <label htmlFor="semester" className="form-label">
+            <span>Current Semester</span>
+            <span className="form-hint">Semester Aktif</span>
+          </label>
           <input
             id="semester"
             name="semester"
             type="text"
             inputMode="numeric"
-            placeholder="5"
+            className="form-input"
+            placeholder="e.g. 5"
             value={currentProfile.semester}
             onChange={handleChange}
           />
         </div>
-        <div className="field">
-          <label htmlFor="gpa">GPA</label>
+        <div className="form-group form-col field">
+          <label htmlFor="gpa" className="form-label">
+            <span>Current GPA</span>
+            <span className="form-hint">IPK Kumulatif (0 - 4.00)</span>
+          </label>
           <input
             id="gpa"
             name="gpa"
             type="text"
             inputMode="decimal"
-            placeholder="3.52"
+            className="form-input"
+            placeholder="e.g. 3.52"
             value={currentProfile.gpa}
             onChange={handleChange}
           />
         </div>
       </div>
 
-      <div className="field">
-        <label htmlFor="skills">Skills</label>
+      <div className="form-group field">
+        <label htmlFor="skills" className="form-label">
+          <span>Skills &amp; Competencies</span>
+          <span className="form-hint">Keahlian (pisahkan koma)</span>
+        </label>
         <input
           id="skills"
           name="skills"
           type="text"
-          placeholder="Python, React, Cloud, Cybersecurity..."
+          className="form-input"
+          placeholder="e.g. Python, React, Cloud, Data Analysis, Leadership..."
           value={currentProfile.skills}
           onChange={handleChange}
         />
       </div>
 
-      <div className="field">
-        <label htmlFor="experience">Experience &amp; Achievements</label>
+      <div className="form-group field">
+        <label htmlFor="experience" className="form-label">
+          <span>Experience &amp; Achievements</span>
+          <span className="form-hint">Pengalaman &amp; Prestasi</span>
+        </label>
         <textarea
           id="experience"
           name="experience"
+          className="form-textarea"
           rows="5"
-          placeholder="Organizations, projects, internships, certifications, competitions..."
+          placeholder="Organizations, projects, internships, certifications, competitions, leadership roles..."
           value={currentProfile.experience}
           onChange={handleChange}
         />

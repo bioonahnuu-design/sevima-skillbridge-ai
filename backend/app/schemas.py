@@ -78,3 +78,36 @@ class MatchResponse(BaseModel):
     matched: List[GapItem] = Field(default_factory=list)
     gaps: List[GapItem] = Field(default_factory=list)
     needs_verification: List[GapItem] = Field(default_factory=list)
+
+
+class ActionItem(BaseModel):
+    priority: str = Field(..., description="Priority level: High, Medium, or Low")
+    category: str = Field(..., description="Category, e.g. Skills, Documents, Academic, Eligibility")
+    requirement: str = Field(..., description="The requirement or gap being addressed")
+    action: str = Field(..., description="Concrete action recommendation")
+    reason: str = Field(..., description="Rationale for the action and priority")
+    status: str = Field(default="todo", description="Task completion status")
+
+
+class VerificationActionItem(BaseModel):
+    requirement: str = Field(..., description="Requirement to be verified")
+    action: str = Field(..., description="Verification guidance step")
+    status: str = Field(default="todo", description="Verification status")
+
+
+class ActionPlanResponse(BaseModel):
+    summary: str = Field(..., description="Overall action plan summary")
+    priority_actions: List[ActionItem] = Field(default_factory=list, description="Prioritized list of actionable steps")
+    verification_actions: List[VerificationActionItem] = Field(default_factory=list, description="List of verification steps")
+    deadline_status: str = Field(..., description="Deadline status and remaining time analysis")
+    next_best_action: str = Field(..., description="The single highest-leverage immediate action to take")
+
+
+class PlanRequest(BaseModel):
+    match_result: Optional[MatchResponse] = None
+    opportunity: Optional[OpportunityAnalyzeResponse] = None
+    gaps: Optional[List[GapItem]] = None
+    needs_verification: Optional[List[GapItem]] = None
+    matched: Optional[List[GapItem]] = None
+    deadline: Optional[str] = None
+

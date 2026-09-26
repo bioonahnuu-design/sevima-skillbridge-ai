@@ -1,10 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "../components/Navbar.jsx";
 import ProfileForm from "../components/ProfileForm.jsx";
 import OpportunityForm from "../components/OpportunityForm.jsx";
 import OpportunityAnalysis from "../components/OpportunityAnalysis.jsx";
 import ProfileMatch from "../components/ProfileMatch.jsx";
-import { analyzeOpportunity, matchProfile } from "../services/api.js";
+import GapAnalysis from "../components/GapAnalysis.jsx";
+import ActionPlan from "../components/ActionPlan.jsx";
+import {
+  analyzeOpportunity,
+  matchProfile,
+  generateActionPlan,
+} from "../services/api.js";
+
+const MARQUEE_ITEMS = [
+  "SCHOLARSHIP",
+  "INTERNSHIP",
+  "EXCHANGE",
+  "COMPETITION",
+  "VOLUNTEER",
+  "COURSE",
+];
 
 function Dashboard() {
   const [profile, setProfile] = useState({
@@ -17,16 +32,54 @@ function Dashboard() {
 
   const [analysisData, setAnalysisData] = useState(null);
   const [matchData, setMatchData] = useState(null);
+  const [actionPlanData, setActionPlanData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingStage, setLoadingStage] = useState("");
   const [error, setError] = useState(null);
+  const [planError, setPlanError] = useState(null);
+
+  // Scroll reveal observer
+  useEffect(() => {
+    if (typeof window === "undefined" || !("IntersectionObserver" in window)) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-revealed");
+          }
+        });
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -40px 0px" }
+    );
+
+    const revealElements = document.querySelectorAll(".reveal-section");
+    revealElements.forEach((el) => observer.observe(el));
+
+    return () => observer.disconnect();
+  }, [analysisData, matchData, actionPlanData]);
 
   function handleProfileChange(name, value) {
     setProfile((prev) => ({ ...prev, [name]: value }));
   }
 
+  function scrollToWorkspace() {
+    const el = document.getElementById("workspace");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
+
+  function scrollToHowItWorks() {
+    const el = document.getElementById("how-it-works");
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  }
+
   async function handleAnalyze({ opportunity_type, description }) {
     setIsLoading(true);
+    setLoadingStage("Analyzing opportunity requirements...");
     setError(null);
+    setPlanError(null);
 
     // Profile validation
     if (profile.gpa && profile.gpa.trim()) {
@@ -34,6 +87,7 @@ function Dashboard() {
       if (isNaN(parsedGpa) || parsedGpa < 0 || parsedGpa > 4.0) {
         setError("Please enter a valid GPA between 0.00 and 4.00.");
         setIsLoading(false);
+        setLoadingStage("");
         return;
       }
     }
@@ -43,6 +97,7 @@ function Dashboard() {
       if (isNaN(parsedSem) || parsedSem < 1 || parsedSem > 14) {
         setError("Please enter a valid semester number (1 to 14).");
         setIsLoading(false);
+        setLoadingStage("");
         return;
       }
     }
@@ -67,19 +122,41 @@ function Dashboard() {
     };
 
     try {
-      // 1. Analyze Opportunity
+      // 1. Analyze Opportunity (Core Feature #1)
       const oppResult = await analyzeOpportunity({
         opportunity_type,
         description,
       });
       setAnalysisData(oppResult);
 
-      // 2. Perform Profile Match & Gap Analysis
+      // 2. Perform Profile Match & Gap Analysis (Core Feature #2)
+      setLoadingStage("Evaluating profile readiness...");
       const matchResult = await matchProfile({
         profile: formattedProfile,
         opportunity: oppResult,
       });
       setMatchData(matchResult);
+
+      // 3. Generate Action Plan (Core Feature #3)
+      setLoadingStage("Preparing your action plan...");
+      try {
+        const planResult = await generateActionPlan({
+          match_result: matchResult,
+          opportunity: oppResult,
+          deadline: oppResult?.analysis?.deadline,
+        });
+        setActionPlanData(planResult);
+      } catch (planErr) {
+        setPlanError(planErr.message || "Failed to generate action plan.");
+      }
+
+      // Smooth scroll to results upon completion
+      setTimeout(() => {
+        const resultsEl = document.getElementById("results");
+        if (resultsEl) {
+          resultsEl.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 150);
     } catch (err) {
       setError(
         err.message ||
@@ -87,100 +164,450 @@ function Dashboard() {
       );
     } finally {
       setIsLoading(false);
+      setLoadingStage("");
     }
   }
 
+  const hasResults = Boolean(analysisData || matchData);
+
   return (
-    <div className="app-shell">
-      <Navbar />
+    <div className="platform-root">
+      <Navbar hasResults={hasResults} />
 
-      <main className="page">
-        <section className="hero" aria-labelledby="hero-heading">
-          <p className="hero-pill">YOUR AI OPPORTUNITY COPILOT</p>
-          <h1 id="hero-heading" className="hero-title">
-            Turn opportunities into
-            <span className="hero-highlight"> your next move.</span>
-          </h1>
-          <p className="hero-copy">
-            Analyze scholarships, internships, exchanges and other opportunities
-            against your profile — then discover your gaps and the actions that
-            matter most.
-          </p>
-          <ul className="hero-benefits">
-            <li>
-              <span className="benefit-check" aria-hidden="true">
-                ✓
-              </span>
-              Profile Match
-            </li>
-            <li>
-              <span className="benefit-check" aria-hidden="true">
-                ✓
-              </span>
-              Gap Analysis
-            </li>
-            <li>
-              <span className="benefit-check" aria-hidden="true">
-                ✓
-              </span>
-              Action Plan
-            </li>
-          </ul>
+      <main>
+        {/* ========================================================
+            1. HERO SECTION (Approved Design Preserved)
+            ======================================================== */}
+        <section id="hero" className="hero-section">
+          <div className="hero-container">
+            <div className="hero-content">
+              <div className="hero-eyebrow">
+                <span className="eyebrow-accent-dot" aria-hidden="true" />
+                <span>STUDENT OPPORTUNITY INTELLIGENCE</span>
+              </div>
+
+              <h1 className="hero-headline">
+                Turn opportunities into{" "}
+                <span className="hero-headline-highlight">your next move.</span>
+              </h1>
+
+              <p className="hero-description">
+                Analyze scholarships, internships, exchanges, and competitions
+                against your profile — then turn the gaps into clear next actions.
+              </p>
+
+              <div className="hero-cta-group">
+                <button
+                  type="button"
+                  className="primary-hero-btn"
+                  onClick={scrollToWorkspace}
+                >
+                  <span>Analyze Opportunity</span>
+                  <span className="btn-arrow-icon" aria-hidden="true">
+                    →
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  className="secondary-hero-btn"
+                  onClick={scrollToHowItWorks}
+                >
+                  See How It Works
+                </button>
+              </div>
+
+              <div className="hero-supporting-categories">
+                <span className="cat-bullet">Scholarship</span>
+                <span className="cat-separator" aria-hidden="true">
+                  •
+                </span>
+                <span className="cat-bullet">Internship</span>
+                <span className="cat-separator" aria-hidden="true">
+                  •
+                </span>
+                <span className="cat-bullet">Exchange</span>
+                <span className="cat-separator" aria-hidden="true">
+                  •
+                </span>
+                <span className="cat-bullet">Competition</span>
+              </div>
+            </div>
+
+            {/* Right Side: Hero Visual Product Preview */}
+            <div className="hero-visual-wrapper" aria-hidden="true">
+              <div className="floating-preview-card">
+                <div className="preview-top-bar">
+                  <div className="preview-badge-group">
+                    <span className="preview-type-pill">Scholarship</span>
+                    <span className="preview-status-pill">Parsed</span>
+                  </div>
+                  <span className="preview-target-name">
+                    Beasiswa Prestasi Unggulan 2026
+                  </span>
+                </div>
+
+                <div className="preview-score-display">
+                  <div className="preview-score-circle">
+                    <span className="preview-score-val">88%</span>
+                    <span className="preview-score-lbl">MATCH</span>
+                  </div>
+                  <div className="preview-score-info">
+                    <span className="preview-score-title">
+                      Strong Profile Match
+                    </span>
+                    <p className="preview-score-sub">
+                      5 criteria satisfied across academics &amp; citizenship.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pathway Visual */}
+                <div className="preview-pathway">
+                  <div className="pathway-step pathway-active">
+                    <span className="pathway-dot" />
+                    <span>Profile</span>
+                  </div>
+                  <span className="pathway-line" />
+                  <div className="pathway-step pathway-active">
+                    <span className="pathway-dot" />
+                    <span>Match Analysis</span>
+                  </div>
+                  <span className="pathway-line" />
+                  <div className="pathway-step pathway-active">
+                    <span className="pathway-dot" />
+                    <span>Action Plan</span>
+                  </div>
+                </div>
+
+                {/* Micro Metric Indicators */}
+                <div className="preview-metrics-row">
+                  <div className="preview-metric-box metric-box-matched">
+                    <span className="metric-box-num">5</span>
+                    <span className="metric-box-label">Matched</span>
+                  </div>
+                  <div className="preview-metric-box metric-box-gaps">
+                    <span className="metric-box-num">2</span>
+                    <span className="metric-box-label">Gaps</span>
+                  </div>
+                  <div className="preview-metric-box metric-box-verify">
+                    <span className="metric-box-num">1</span>
+                    <span className="metric-box-label">Verify</span>
+                  </div>
+                </div>
+
+                <div className="floating-accent-tag">
+                  <span className="accent-tag-pulse" />
+                  <span>Deterministic Evaluation</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
-        <ol className="journey" aria-label="How SkillBridge works">
-          <li>Profile</li>
-          <li>Opportunity</li>
-          <li>AI Match</li>
-          <li>Action</li>
-        </ol>
-
-        <section className="workspace" aria-label="SkillBridge workspace">
-          <article className="card">
-            <header className="card-header">
-              <div className="card-icon" aria-hidden="true">
-                <span className="student-icon">👤</span>
-              </div>
-              <div>
-                <p className="step-label">STEP 01</p>
-                <h2>Build Your Profile</h2>
-                <p className="card-subtitle">
-                  Tell SkillBridge about your background so your opportunities
-                  can be evaluated personally.
-                </p>
-              </div>
-            </header>
-            <ProfileForm profile={profile} onChange={handleProfileChange} />
-          </article>
-
-          <article className="card">
-            <header className="card-header">
-              <div className="card-icon card-icon-spark" aria-hidden="true">
-                <span className="spark">✦</span>
-              </div>
-              <div>
-                <p className="step-label">STEP 02</p>
-                <h2>Analyze an Opportunity</h2>
-                <p className="card-subtitle">
-                  Paste an opportunity and let SkillBridge understand its
-                  requirements.
-                </p>
-              </div>
-            </header>
-            <OpportunityForm
-              onAnalyze={handleAnalyze}
-              isLoading={isLoading}
-              error={error}
-            />
-          </article>
+        {/* ========================================================
+            2. OPPORTUNITY MOVING STRIP (Approved Design Preserved)
+            ======================================================== */}
+        <section
+          className="opportunity-marquee-section"
+          aria-label="Supported Opportunities"
+        >
+          <div className="marquee-track">
+            <div className="marquee-group">
+              {MARQUEE_ITEMS.map((item, idx) => (
+                <span key={`a-${idx}`} className="marquee-item">
+                  <span>{item}</span>
+                  <span className="marquee-separator" aria-hidden="true">
+                    •
+                  </span>
+                </span>
+              ))}
+            </div>
+            <div className="marquee-group" aria-hidden="true">
+              {MARQUEE_ITEMS.map((item, idx) => (
+                <span key={`b-${idx}`} className="marquee-item">
+                  <span>{item}</span>
+                  <span className="marquee-separator" aria-hidden="true">
+                    •
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
         </section>
 
-        {/* Core Feature #1: Structured Opportunity Analysis */}
-        {analysisData && <OpportunityAnalysis data={analysisData} />}
+        {/* ========================================================
+            3. HOW IT WORKS (Approved Design Preserved)
+            ======================================================== */}
+        <section id="how-it-works" className="workflow-section reveal-section">
+          <div className="section-container workflow-container">
+            <div className="section-center-header">
+              <span className="section-eyebrow">END-TO-END COPILOT</span>
+              <h2 className="section-title">From opportunity to action.</h2>
+              <p className="section-subtitle">
+                A structured four-step journey transforming complex requirements
+                into personalized, high-confidence student actions.
+              </p>
+            </div>
 
-        {/* Core Feature #2: Profile Match Score & Gap Analysis */}
-        {matchData && <ProfileMatch data={matchData} />}
+            <div className="timeline-workflow">
+              <div className="timeline-track-bar" aria-hidden="true" />
+
+              <div className="timeline-step">
+                <div className="timeline-node">
+                  <span className="node-number">01</span>
+                </div>
+                <div className="step-content">
+                  <h3 className="step-title">Build Profile</h3>
+                  <p className="step-description">
+                    Input your study program, semester, GPA, skills, and past
+                    activities into your private workspace.
+                  </p>
+                </div>
+              </div>
+
+              <div className="timeline-step">
+                <div className="timeline-node">
+                  <span className="node-number">02</span>
+                </div>
+                <div className="step-content">
+                  <h3 className="step-title">Analyze Opportunity</h3>
+                  <p className="step-description">
+                    Paste announcements or brochures; our deterministic parser
+                    extracts criteria, deadlines, and benefits instantly.
+                  </p>
+                </div>
+              </div>
+
+              <div className="timeline-step">
+                <div className="timeline-node">
+                  <span className="node-number">03</span>
+                </div>
+                <div className="step-content">
+                  <h3 className="step-title">Measure Your Match</h3>
+                  <p className="step-description">
+                    View a transparent, weighted Profile Match Score across
+                    eligibility, academic fit, skills, and documents.
+                  </p>
+                </div>
+              </div>
+
+              <div className="timeline-step">
+                <div className="timeline-node">
+                  <span className="node-number">04</span>
+                </div>
+                <div className="step-content">
+                  <h3 className="step-title">Take Action</h3>
+                  <p className="step-description">
+                    Pinpoint specific gaps and prepare verified requirements
+                    with complete clarity before submitting.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            4. WORKSPACE (Section 4 & 5: Unified Surface Composition)
+            ======================================================== */}
+        <section id="workspace" className="workspace-section reveal-section">
+          <div className="section-container">
+            <div className="section-header-left">
+              <span className="section-eyebrow">YOUR OPPORTUNITY WORKSPACE</span>
+              <h2 className="section-title">
+                Build your profile.
+                <br />
+                Analyze your opportunity.
+              </h2>
+              <p className="section-subtitle">
+                Give SkillBridge the context it needs to evaluate your readiness.
+              </p>
+            </div>
+
+            {/* Single Cohesive Workspace Surface with Subtle Vertical Divider */}
+            <div className="workspace-unified-sheet">
+              {/* Left Column: Student Profile (WHO AM I?) */}
+              <div className="workspace-column column-profile">
+                <div className="workspace-col-header">
+                  <div className="col-context-tag">
+                    <span className="col-step-pill">01</span>
+                    <span className="col-context-label">WHO AM I?</span>
+                  </div>
+                  <h3 className="col-title">STUDENT PROFILE</h3>
+                  <p className="col-subtitle">Your academic context</p>
+                </div>
+                <ProfileForm
+                  profile={profile}
+                  onChange={handleProfileChange}
+                />
+              </div>
+
+              {/* Vertical Divider */}
+              <div className="workspace-sheet-divider" aria-hidden="true" />
+
+              {/* Right Column: Opportunity Input (WHAT AM I TARGETING?) */}
+              <div className="workspace-column column-opportunity">
+                <div className="workspace-col-header">
+                  <div className="col-context-tag">
+                    <span className="col-step-pill">02</span>
+                    <span className="col-context-label">WHAT AM I TARGETING?</span>
+                  </div>
+                  <h3 className="col-title">OPPORTUNITY</h3>
+                  <p className="col-subtitle">What are you targeting?</p>
+                </div>
+                <OpportunityForm
+                  onAnalyze={handleAnalyze}
+                  isLoading={isLoading}
+                  loadingStage={loadingStage}
+                  error={error}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ========================================================
+            5. YOUR READINESS REPORT (Continuous Story Flow)
+            Rendered ONLY when analysis/match results exist.
+            Order:
+            1. Report Header
+            2. Opportunity Snapshot (Core #1)
+            3. Profile Match (Core #2)
+            4. What's Holding You Back? (Core #2)
+            5. Action Plan & Roadmap (Core #3)
+            ======================================================== */}
+        {hasResults && (
+          <section id="results" className="results-section reveal-section">
+            <div className="section-container">
+              {/* Report Header Transition */}
+              <div className="section-center-header report-master-header">
+                <span className="section-eyebrow">YOUR READINESS REPORT</span>
+                <h2 className="section-title">Know where you stand.</h2>
+                <p className="section-subtitle">
+                  SkillBridge turns the opportunity requirements into a clear
+                  view of your current readiness.
+                </p>
+              </div>
+
+              {/* 1. Opportunity Snapshot */}
+              {analysisData && <OpportunityAnalysis data={analysisData} />}
+
+              {/* 2. Profile Match Hero & Breakdown */}
+              {matchData && <ProfileMatch data={matchData} />}
+
+              {/* 3. What's Holding You Back? (Gap Analysis) */}
+              {matchData && <GapAnalysis data={matchData} />}
+
+              {/* 4. Action Plan Roadmap & Verification */}
+              {actionPlanData && <ActionPlan data={actionPlanData} />}
+
+              {planError && (
+                <div
+                  className="alert-banner alert alert-warning"
+                  role="alert"
+                  style={{ marginTop: "24px" }}
+                >
+                  <span className="alert-icon" aria-hidden="true">
+                    ⚠
+                  </span>
+                  <span>Action Plan Notice: {planError}</span>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ========================================================
+            6. FINAL CTA (Section 6 & 20: Rendered ONLY After Results!)
+            ======================================================== */}
+        {hasResults && (
+          <section className="final-cta-section reveal-section">
+            <div className="section-container final-cta-container">
+              <h2 className="final-cta-headline">
+                Your next opportunity
+                <br />
+                shouldn&apos;t be guesswork.
+              </h2>
+              <p className="final-cta-subtext">
+                Understand the requirements. Know your gaps. Take the next step.
+              </p>
+              <button
+                type="button"
+                className="final-cta-btn"
+                onClick={scrollToWorkspace}
+              >
+                Analyze Another Opportunity
+              </button>
+            </div>
+          </section>
+        )}
       </main>
+
+      {/* ========================================================
+          7. FOOTER
+          ======================================================== */}
+      <footer className="platform-footer">
+        <div className="footer-container">
+          <div className="footer-main-row">
+            <div className="footer-brand-col">
+              <div className="footer-logo-row">
+                <svg
+                  viewBox="0 0 32 32"
+                  width="28"
+                  height="28"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <rect width="32" height="32" rx="6" fill="#1e293b" />
+                  <path
+                    d="M7 21C11 14 21 14 25 21"
+                    stroke="#38bdf8"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                  />
+                  <circle cx="16" cy="11" r="2.5" fill="#ffffff" />
+                </svg>
+                <span className="footer-brand-name">SkillBridge AI</span>
+              </div>
+              <p className="footer-brand-tagline">
+                From Opportunity to Action.
+              </p>
+              <p className="footer-mission-note">
+                Built for university students navigating scholarships, internships,
+                student exchanges, and national competitions.
+              </p>
+            </div>
+
+            <div className="footer-nav-col">
+              <h4 className="footer-col-title">Product</h4>
+              <ul className="footer-links-list">
+                <li>Opportunity Analyzer</li>
+                <li>Profile Match</li>
+                <li>Gap Analysis</li>
+                <li>Action Planner</li>
+              </ul>
+            </div>
+
+            <div className="footer-nav-col">
+              <h4 className="footer-col-title">Hackathon</h4>
+              <ul className="footer-links-list">
+                <li>SEMESTA 8</li>
+                <li>Build with AI</li>
+                <li>University Student Copilot</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="footer-bottom-row">
+            <p className="footer-copyright">
+              SkillBridge AI — Built for students navigating their next opportunity.
+            </p>
+            <p className="footer-sub-note">
+              Deterministic analyzer &amp; readiness engine.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
